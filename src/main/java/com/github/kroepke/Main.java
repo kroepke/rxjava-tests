@@ -21,9 +21,7 @@ package com.github.kroepke;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import rx.Observable;
 import rx.Subscriber;
-import rx.functions.Action1;
 import rx.subjects.PublishSubject;
 
 import java.util.List;
@@ -32,7 +30,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 public class Main {
     private static final Logger log = LoggerFactory.getLogger(Main.class);
@@ -136,16 +136,8 @@ public class Main {
             @Override
             protected PublishSubject<Long> initialValue() {
                 PublishSubject<Long> subject1 = PublishSubject.create();
-                subject1.window(1, SECONDS, 19).subscribe(new Action1<Observable<Long>>() {
-                    @Override
-                    public void call(Observable<Long> longObservable) {
-                        longObservable.toList().forEach(new Action1<List<Long>>() {
-                            @Override
-                            public void call(List<Long> longs) {
-                                flushSubscriber.onNext(longs);
-                            }
-                        });
-                    }
+                subject1.window(1, SECONDS, 19).subscribe(longObservable -> {
+                    longObservable.toList().forEach(longs -> flushSubscriber.onNext(longs));
                 });
                 return subject1;
             }
@@ -179,17 +171,14 @@ public class Main {
         }
 
         private class FlushSubscriber extends Subscriber<List<Long>> {
-            @Override
             public void onCompleted() {
                 log.info("completed, no more items coming.");
             }
 
-            @Override
             public void onError(Throwable e) {
                 log.error("Exception caught", e);
             }
 
-            @Override
             public void onNext(List<Long> longs) {
                 flush(longs);
             }
